@@ -190,3 +190,48 @@ describe('detectSecurity', () => {
     expect(doc.security).toEqual([{ bearerAuth: [] }]);
   });
 });
+
+describe('响应真实数据（schema.enum）', () => {
+  it('响应 schema 携带真实数据，数组截断为 10 条', () => {
+    const list = Array.from({ length: 20 }, (_, i) => ({ id: i, name: `u${i}` }));
+    const doc = buildOpenAPI([
+      cap({ url: 'https://a.com/users', responseBody: { total: 20, list } }),
+    ]);
+    const op = doc.paths['/users'].get as any;
+    const schema = op.responses['200'].content['application/json'].schema;
+    expect(Array.isArray(schema.enum)).toBe(true);
+    expect(schema.enum).toHaveLength(1);
+    expect(schema.enum[0].total).toBe(20);
+    expect(schema.enum[0].list).toHaveLength(10);
+    expect(schema.enum[0].list[0]).toEqual({ id: 0, name: 'u0' });
+  });
+
+  it('嵌套数组同样截断', () => {
+    const doc = buildOpenAPI([
+      cap({
+        url: 'https://a.com/x',
+        responseBody: { data: { rows: Array.from({ length: 15 }, (_, i) => i) } },
+      }),
+    ]);
+    const op = doc.paths['/x'].get as any;
+    const example = op.responses['200'].content['application/json'].schema.enum[0];
+    expect(example.data.rows).toHaveLength(10);
+  });
+
+  it('includeResponseExamples 为 false 时不携带 enum', () => {
+    const doc = buildOpenAPI([cap({ url: 'https://a.com/x', responseBody: { a: 1 } })], {
+      includeResponseExamples: false,
+    });
+    const op = doc.paths['/x'].get as any;
+    expect(op.responses['200'].content['application/json'].schema.enum).toBeUndefined();
+  });
+
+  it('maxExampleItems 可自定义', () => {
+    const doc = buildOpenAPI(
+      [cap({ url: 'https://a.com/x', responseBody: [1, 2, 3, 4, 5] })],
+      { maxExampleItems: 2 },
+    );
+    const op = doc.paths['/x'].get as any;
+    expect(op.responses['200'].content['application/json'].schema.enum[0]).toEqual([1, 2]);
+  });
+});

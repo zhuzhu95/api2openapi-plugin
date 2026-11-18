@@ -1,11 +1,16 @@
 import type { CapturedRequest, HarPostData } from './captured';
 import { inferLooseString, inferSchema, mergeSchemas, type JsonSchema } from './schema-infer';
 import { pathToTemplate, toOperationId, toTag } from './path-template';
+import { truncateExample, DEFAULT_MAX_EXAMPLE_ITEMS } from './example';
 
 export interface BuildOptions {
   title?: string;
   /** 转换为 securityScheme 之外，自定义请求头是否输出为 header 参数 */
   includeHeaderParams?: boolean;
+  /** 响应 schema 中是否携带真实响应数据（Apifox 惯例放在 schema.enum），默认 true */
+  includeResponseExamples?: boolean;
+  /** 示例数据中数组最大保留条数，默认 10 */
+  maxExampleItems?: number;
 }
 
 /** 无业务含义、不导出为参数的通用请求头 */
@@ -191,7 +196,11 @@ function buildParameters(samples: CapturedRequest[], pathParams: Array<{ name: s
   return parameters;
 }
 
-function buildResponses(samples: CapturedRequest[]) {
+function buildResponses(
+  samples: CapturedRequest[],
+  includeExamples: boolean,
+  maxExampleItems: number,
+) {
   const responses: Record<string, unknown> = {};
   const byStatus = new Map<string, CapturedRequest[]>();
   for (const s of samples) {
@@ -201,6 +210,8 @@ function buildResponses(samples: CapturedRequest[]) {
 
   for (const [status, group] of byStatus) {
     let jsonSchema: JsonSchema | undefined;
+    let jsonExample: unknown;
+    let hasExample = false;
     let contentType = 'application/json';
     for (const s of group) {
       const mime = (s.mimeType || s.responseHeaders['content-type'] || '').split(';')[0].trim().toLowerCase();
@@ -210,6 +221,10 @@ function buildResponses(samples: CapturedRequest[]) {
         try {
           const parsed: unknown = JSON.parse(body);
           jsonSchema = jsonSchema ? mergeSchemas(jsonSchema, inferSchema(parsed)) : inferSchema(parsed);
+          if (!hasExample) {
+            jsonExample = parsed;
+            hasExample = true;
+          }
           contentType = mime || 'application/json';
         } catch {
           // 非 JSON 文本，忽略 schema
@@ -226,7 +241,17 @@ function buildResponses(samples: CapturedRequest[]) {
       const first = group[0];
       responses[status] = {
         description: first.statusText || STATUS_TEXT[first.status] || '',
-        ...(jsonSchema ? { content: { [contentType]: { schema: jsonSchema } } } : {}),
+        ...(jsonSchema
+          ? {
+              content: {
+                [contentType]: {
+                  schema: includeExamples && hasExample
+                    ? { ...jsonSchema, enum: [truncateExample(jsonExample, maxExampleItems)] }
+                    : jsonSchema,
+                },
+              },
+            }
+          : {}),
       };
     }
   }
@@ -240,6 +265,8 @@ function buildResponses(samples: CapturedRequest[]) {
 /** 将捕获的请求样本转换为 OpenAPI 3.0.3 文档 */
 export function buildOpenAPI(requests: CapturedRequest[], opts: BuildOptions = {}) {
   const includeHeaders = opts.includeHeaderParams ?? true;
+  const includeExamples = opts.includeResponseExamples ?? true;
+  const maxExampleItems = opts.maxExampleItems ?? DEFAULT_MAX_EXAMPLE_ITEMS;
 
   interface Group {
     method: string;
@@ -300,7 +327,7 @@ export function buildOpenAPI(requests: CapturedRequest[], opts: BuildOptions = {
       operation.requestBody = { required: true, content };
     }
 
-    operation.responses = buildResponses(samples);
+    operation.responses = buildResponses(samples, includeExamples, maxExampleItems);
 
     paths[template] = paths[template] ?? {};
     paths[template][method.toLowerCase()] = operation;

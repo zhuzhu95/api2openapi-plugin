@@ -7,6 +7,7 @@ Chrome 开发者工具扩展：捕获网页实际调用的接口请求，一键�
 - 在 F12 开发者工具中新增 **API→OpenAPI** 面板，自动捕获 XHR / Fetch 请求
 - 勾选一条或多条请求，一键转换为 OpenAPI JSON（多条同路径样本自动合并 Schema）
 - 自动识别路径参数（`/users/123` → `/users/{userId}`）、推断请求体 / 响应体 JSON Schema
+- 响应 schema 携带真实响应数据（放在 `schema.enum`，与 Apifox 导出格式一致），数组超过 10 条自动截断为 10 条
 - 敏感信息处理：
   - `Authorization`、`Cookie`、`x-api-key` 等鉴权头自动转为 Apifox 可识别的鉴权配置（securityScheme），**不导出真实凭证**
   - `token`、`sign`、`pwd` 等敏感 query 参数示例值脱敏为 `******`
