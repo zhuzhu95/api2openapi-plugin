@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header id="toolbar">
+    <input id="search" type="search" placeholder="按 URL 过滤…">
+    <select id="methodFilter">
+      <option value="">全部方法</option>
+      <option>GET</option><option>POST</option><option>PUT</option>
+      <option>PATCH</option><option>DELETE</option><option>OPTIONS</option>
+    </select>
+    <button id="toggleCapture" title="暂停/继续捕获请求">暂停</button>
+    <button id="clear">清空</button>
+    <label class="check"><input type="checkbox" id="preserveLog"> 保留日志</label>
+    <span id="stats"></span>
+  </header>
+
+  <div id="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-check"><input type="checkbox" id="selectAll"></th>
+          <th class="col-method">方法</th>
+          <th>URL</th>
+          <th class="col-status">状态</th>
+          <th class="col-size">大小</th>
+          <th class="col-op"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty">打开本面板后，在页面中触发接口请求即可自动捕获。</div>
+  </div>
+
+  <div id="actions">
+    <button id="convert" class="primary">转换选中</button>
+    <button id="copy">复制 JSON</button>
+    <button id="download">下载 JSON</button>
+    <button id="harToggle">导入 HAR</button>
+  </div>
+
+  <div id="harBox" hidden>
+    <textarea id="harInput" rows="4" placeholder='在 Network 面板右键请求 → Copy → Copy as HAR (sanitized)，粘贴到这里，支持单条或整个 HAR 文件'></textarea>
+    <button id="harImport">解析并加入列表</button>
+  </div>
+
+  <pre id="preview">选择请求后点击「转换选中」，此处将显示 OpenAPI 3.0.3 JSON，可直接导入 Apifox。</pre>
+
+  <script type="module" src="dist/panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "api-to-openapi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome DevTools 扩展：捕获网页接口请求并转换为 OpenAPI 3.0 JSON（可导入 Apifox）",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/panel.ts src/devtools.ts --bundle --outdir=dist --format=esm --target=chrome100",
+    "watch": "npm run build -- --watch",
+    "pack": "npm run build && rm -rf release && mkdir -p release && cp manifest.json devtools.html panel.html panel.css release/ && cp -r dist release/ && echo '已输出到 release/，可直接在 chrome://extensions 加载该目录'",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
+  }
+}
